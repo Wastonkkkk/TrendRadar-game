@@ -814,6 +814,20 @@ class NewsAnalyzer:
         has_rss_content = bool(rss_items and len(rss_items) > 0)
         has_any_content = has_news_content or has_rss_content
 
+        # ── 手动触发强制推送（GitHub Actions 手动 Run workflow）──
+        # 定时任务仍按关键词命中推送；手动触发时关键词即便 0 命中，
+        # 只要当前热榜有内容（独立展示区）也照常推送，保证“主动触发必有飞书消息”。
+        force_push = os.environ.get("TR_FORCE_PUSH", "").strip().lower() in (
+            "1", "true", "yes", "on",
+        )
+        board_available = bool(standalone_data)
+        if force_push:
+            if has_any_content:
+                print("[推送] 手动触发（TR_FORCE_PUSH=1）：检测到关键词命中内容，正常推送")
+            elif board_available:
+                has_any_content = True
+                print("[推送] 手动触发（TR_FORCE_PUSH=1）：关键词 0 命中，使用当前热榜独立展示区兜底推送")
+
         # 计算热榜匹配条数
         news_count = sum(len(stat.get("titles", [])) for stat in stats) if stats else 0
         rss_count = sum(stat.get("count", 0) for stat in rss_items) if rss_items else 0
@@ -830,7 +844,10 @@ class NewsAnalyzer:
             if rss_count > 0:
                 content_parts.append(f"RSS {rss_count} 条")
             total_count = news_count + rss_count
-            print(f"[推送] 准备发送：{' + '.join(content_parts)}，合计 {total_count} 条")
+            if not content_parts and force_push:
+                print("[推送] 准备发送：独立展示区（当前热榜）兜底内容")
+            else:
+                print(f"[推送] 准备发送：{' + '.join(content_parts)}，合计 {total_count} 条")
 
             # 调度系统决策
             if not schedule.push:
@@ -909,6 +926,8 @@ class NewsAnalyzer:
             and has_notification
             and not has_any_content
         ):
+            if force_push and not board_available:
+                print("[推送] ⚠️ 手动强制推送已开启，但当前无任何热榜内容可推送（可能各平台抓取失败）")
             mode_strategy = self._get_mode_strategy()
             if self.report_mode == "incremental":
                 if not has_rss_content:

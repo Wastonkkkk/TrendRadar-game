@@ -39,6 +39,10 @@ on:
 
   workflow_dispatch:
 
+  # TEMP-VERIFY: 验证飞书推送后移除（仅测试用）
+  push:
+    branches: [ master ]
+
 concurrency:
   group: crawler-${{ github.ref_name }}
   cancel-in-progress: true
@@ -167,6 +171,9 @@ jobs:
           S3_ENDPOINT_URL: ${{ secrets.S3_ENDPOINT_URL }}
           S3_REGION: ${{ secrets.S3_REGION }}
           GITHUB_ACTIONS: true
+          # 手动触发（Run workflow）时强制推送：关键词 0 命中也用当前热榜独立展示区兜底，
+          # 保证每次主动触发飞书都有消息；定时任务不受影响（仍按关键词命中推送）
+          TR_FORCE_PUSH: '1'  # TEMP-VERIFY: 验证后改回仅 workflow_dispatch
         run: uv run python -m trendradar
 
       # --------------------------------------------------------------------------------
