@@ -67,6 +67,26 @@ bombanana
 香蕉炸弹人
 @3
 
+[ADRIFT]
+ADRIFT
+adrift
+@2
+
+[Pokemon Gamma Emerald]
+Pokemon Gamma Emerald
+宝可梦伽玛绿宝石
+@2
+
+[Rust Lake servant]
+Rust Lake servant
+锈湖侍者
+@2
+
+[PVZ Horror]
+PVZ Horror
+植物大战僵尸恐怖版
+@2
+
 [植物大战僵尸融合版]
 植物大战僵尸融合版
 植物大战僵尸杂交版
