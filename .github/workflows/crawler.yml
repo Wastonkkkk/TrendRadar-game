@@ -35,13 +35,10 @@ on:
     #   "15 * * * *"     → 每小时第15分钟 / minute 15 every hour
     #   "30 0-14 * * *"  → 北京时间 8:00-22:00 每小时第30分钟 / Beijing 8am-10pm
     #
-    - cron: "33 * * * *"
+    # 白天时段：北京时间 08:33 / 10:33 / ... / 22:33，每 2 小时一次（避开深夜）
+    - cron: "33 0-14/2 * * *"
 
   workflow_dispatch:
-
-  # TEMP-VERIFY: 验证飞书推送后移除（仅测试用）
-  push:
-    branches: [ master ]
 
 concurrency:
   group: crawler-${{ github.ref_name }}
@@ -62,6 +59,15 @@ jobs:
         with:
           fetch-depth: 1
           clean: true
+
+      # 持久化数据库缓存：让 incremental 增量模式跨运行去重（Actions 环境本身跑完即焚）
+      - name: Restore data cache
+        uses: actions/cache@v4
+        with:
+          path: output
+          key: trendradar-output-${{ github.run_id }}
+          restore-keys: |
+            trendradar-output-
 
       - name: Check Expiration
         env:
@@ -171,9 +177,9 @@ jobs:
           S3_ENDPOINT_URL: ${{ secrets.S3_ENDPOINT_URL }}
           S3_REGION: ${{ secrets.S3_REGION }}
           GITHUB_ACTIONS: true
-          # 手动触发（Run workflow）时强制推送：关键词 0 命中也用当前热榜独立展示区兜底，
-          # 保证每次主动触发飞书都有消息；定时任务不受影响（仍按关键词命中推送）
-          TR_FORCE_PUSH: '1'  # TEMP-VERIFY: 验证后改回仅 workflow_dispatch
+          # 仅手动触发（Run workflow）时强制推送：0 命中也用独立展示区兜底，方便人工验证链路；
+          # 定时任务不受影响：0 命中 / 无新增 = 不推送，不再刷屏
+          TR_FORCE_PUSH: ${{ github.event_name == 'workflow_dispatch' && '1' || '' }}
         run: uv run python -m trendradar
 
       # --------------------------------------------------------------------------------
